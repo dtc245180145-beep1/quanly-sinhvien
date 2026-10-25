@@ -1,0 +1,66 @@
+version: "3.5"
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: qlsv_db
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - student_db_data:/var/lib/mysql
+      - ./database.sql:/docker-entrypoint-initdb.d/01-database.sql:ro
+    networks:
+      - backend
+
+  app:
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    container_name: qlsv_app
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_HOST: db
+      DB_NAME: ${MYSQL_DATABASE}
+      DB_USER: ${MYSQL_USER}
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "8001:8000"
+    depends_on:
+      - db
+    networks:
+      - backend
+      - frontend
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: qlsv_phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: 16M
+    ports:
+      - "127.0.0.1:8084:80"
+    depends_on:
+      - db
+    networks:
+      - backend
+
+volumes:
+  student_db_data:
+
+networks:
+  backend:
+    driver: bridge
+    internal: true
+  frontend:
+    driver: bridge
+
